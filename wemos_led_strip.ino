@@ -47,7 +47,7 @@ void build(sets::Builder& b) {
     {
       sets::Group g1(b, "Общие настройки");
       
-      if (b.Switch("Включить ленту", &ledState) || b.Slider("Яркость", 0, 255, 1, Text(), &ledBr)) {
+      if (b.Switch("ledState"_h, "Включить ленту", &ledState) || b.Slider("ledBr"_h, "Яркость", 0, 255, 1, Text(), &ledBr)) {
         autoOffWaiting = false;
       }
     }
@@ -117,6 +117,13 @@ void build(sets::Builder& b) {
     }
 }
 
+void update(sets::Updater& upd) {
+  if (alarmStarting) {
+    upd.update("ledState"_h, ledState);
+    upd.update("ledBr"_h, ledBr);
+  }
+}
+
 void setup() {
 
     pinMode(LED_PIN, OUTPUT);
@@ -154,6 +161,7 @@ void setup() {
 
     sett.begin();
     sett.onBuild(build);
+    sett.onUpdate(update);
 
     // будильники
     for (uint8_t i = 0; i < ALARMS_COUNT; i++) {
@@ -161,7 +169,7 @@ void setup() {
       if (!db.has(key)) {
         const uint32_t d[alarmDBData::ITEMS_COUNT] = {
           0,
-          25200,
+          25200, // установить семь часов утра при создании нового будильника
           0, 0, 0, 0, 0, 0, 0
         };
         db[key] = d;
@@ -179,14 +187,14 @@ void setup() {
 
 void loop() {
     sett.tick();
+    strip.tick();
     bool isTick = NTP.tick();
 
     if (alarmStarting) {
       if (millis() - timeTemp >= addBrIn) {
         if (ledBr < 255) {
           ledBr++;
-          analogWrite(LED_PIN, ledBr);
-          sett.reload();
+          strip.setBrightness(ledBr);
         }
 
         timeTemp = millis();
@@ -201,6 +209,7 @@ void loop() {
         timeTemp = millis();
         alarmStarting = false;
         autoOffWaiting = true;
+        sett.reload();
       }
     }
     if (isTick && !alarmStarting) {
