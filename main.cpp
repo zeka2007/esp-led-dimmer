@@ -218,6 +218,16 @@ void loop() {
       sett.reload();
     }
 
+    if (NTP.tick()) {
+      if (alarmControl.secondTick()) {
+          ledBr = 0;
+          ledState = true;
+          strip.setBrightness(ledBr);
+          timeTemp = millis();
+          sett.reload();
+      }
+    }
+
     if (alarmControl.isStarting()) {
       if (millis() - timeTemp >= addBrIn) {
         if (ledBr < 255) {
@@ -230,21 +240,11 @@ void loop() {
     }
 
     if (alarmControl.isEnd()) {
-        ledBr = 0;
-        ledState = true;
-        strip.setBrightness(ledBr);
-        timeTemp = millis();
-        sett.reload();
-    }
-
-    if (NTP.tick()) {
-      if (alarmControl.secondTick()) {
-          ledBr = 255;
-          strip.setBrightness(ledBr);
-          timeTemp = millis();
-          autoOffWaiting = true;
-          sett.reload();
-      }
+      ledBr = 255;
+      strip.setBrightness(ledBr);
+      timeTemp = millis();
+      autoOffWaiting = true;
+      sett.reload();
     }
 
     if (autoOffWaiting && db[kk::alarm_auto_off] && millis() - timeTemp >= (uint32_t)db[kk::alarm_auto_off_period].toInt32()*1000) {

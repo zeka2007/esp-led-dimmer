@@ -47,13 +47,12 @@ bool Alarm::isEnd() {
     return false;
 };
 
-bool Alarm::secondTick() {
+bool Alarm::secondTick() { // возвращает true при запуске будильника
     if (_alarmStarting) {
         Datime dt(NTP);
         if (_alarmData[_alarmStartingId][alarmDBData::alarm_seconds] == dt.daySeconds()) {
             _alarmStarting = false;
             _isEndFlag = true;
-            return true;
         }
     }
     else {
@@ -68,6 +67,7 @@ bool Alarm::secondTick() {
                         _alarmStartingId = i;
                         _alarmStarting = true;
                         _isEndFlag = false;
+                        return true;
                     }
                 }   
             }
