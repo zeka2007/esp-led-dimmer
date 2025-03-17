@@ -54,12 +54,6 @@ bool Alarm::secondTick() {
             _alarmStarting = false;
             _isEndFlag = true;
             return true;
-
-        //   ledBr = 255;
-        //   strip.setBrightness(ledBr);
-        //   timeTemp = millis();
-        //   autoOffWaiting = true;
-        //   sett.reload();
         }
     }
     else {
@@ -74,11 +68,6 @@ bool Alarm::secondTick() {
                         _alarmStartingId = i;
                         _alarmStarting = true;
                         _isEndFlag = false;
-                    // ledBr = 0;
-                    // ledState = true;
-                    // strip.setBrightness(ledBr);
-                    // timeTemp = millis();
-                    // sett.reload();
                     }
                 }   
             }
