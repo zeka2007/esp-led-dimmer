@@ -1,8 +1,16 @@
+#include <Arduino.h>
+
 #include <GyverNTP.h>
 #include <GyverDBFile.h>
 #include <LittleFS.h>
+
+#define ALARMS_COUNT 3 // количестов будильников
+
 #include "strip.h"
 #include "config.h"
+#include "alarms.h"
+
+Alarm alarmControl(&NTP);
 
 GyverDBFile db(&LittleFS, "/data.db");
 
@@ -12,15 +20,12 @@ SettingsESP sett("Led strip", &db);
 #define LED_PIN D2 // пин ленты
 LedStrip strip(LED_PIN);
 
-#define ALARMS_COUNT 3 // количестов будильников
 
 uint16_t addBrIn; // добавлять по одной единице яркости каждые n милисекунд
 
 uint16_t ledBr = 255;
-uint8_t alarmStartingId = 0;
 bool ledState = false;
 bool effectsState = false;
-bool alarmStarting = false;
 bool autoOffWaiting = false;
 
 uint32_t timeTemp;
@@ -95,9 +100,9 @@ void build(sets::Builder& b) {
           }
         }
       }
-      if (alarmStarting) {
+      if (alarmControl.isStarting()) {
         if (b.Button("Выключить будильник", sets::Colors::Red)) {
-          alarmStarting = false;
+          alarmControl.forceDisable();
           autoOffWaiting = false;
           ledState = false;
           b.reload();
@@ -118,7 +123,7 @@ void build(sets::Builder& b) {
 }
 
 void update(sets::Updater& upd) {
-  if (alarmStarting) {
+  if (alarmControl.isStarting()) {
     upd.update("ledState"_h, ledState);
     upd.update("ledBr"_h, ledBr);
   }
@@ -177,6 +182,8 @@ void setup() {
       else db[key].writeTo(alarmLocalData[i]);
     }
 
+    alarmControl.setAlarms(alarmLocalData);
+    alarmControl.setAlarmPeriod(db[kk::on_before_alarm_period].toInt32());
    
     addBrIn = db[kk::on_before_alarm_period].toInt32() * 1000 / 255; 
 
@@ -188,9 +195,9 @@ void setup() {
 void loop() {
     sett.tick();
     strip.tick();
-    bool isTick = NTP.tick();
+    
 
-    if (alarmStarting) {
+    if (alarmControl.isStarting()) {
       if (millis() - timeTemp >= addBrIn) {
         if (ledBr < 255) {
           ledBr++;
@@ -201,36 +208,21 @@ void loop() {
       }
     }
 
-    if (isTick && alarmStarting) {
-      Datime dt(NTP);
-      if (alarmLocalData[alarmStartingId][alarmDBData::alarm_seconds] == dt.daySeconds()) {
-        ledBr = 255;
+    if (alarmControl.isEnd()) {
+        ledBr = 0;
+        ledState = true;
         strip.setBrightness(ledBr);
         timeTemp = millis();
-        alarmStarting = false;
-        autoOffWaiting = true;
         sett.reload();
-      }
     }
-    if (isTick && !alarmStarting) {
-      for (uint8_t i = 0; i < ALARMS_COUNT; i++) {
-        if (alarmLocalData[i][alarmDBData::alarm_state]) {
-          Datime dt(NTP);
-          if (alarmLocalData[i][dt.weekDay + 1]) {
 
-            Datime alarmDT(NTP);
-
-            if(alarmLocalData[i][alarmDBData::alarm_seconds] - dt.daySeconds() == db[kk::on_before_alarm_period].toInt32()) {
-              ledBr = 0;
-              ledState = true;
-              alarmStartingId = i;
-              strip.setBrightness(ledBr);
-              timeTemp = millis();
-              alarmStarting = true;
-              sett.reload();
-            }
-          }
-        }
+    if (NTP.tick()) {
+      if (alarmControl.secondTick()) {
+          ledBr = 255;
+          strip.setBrightness(ledBr);
+          timeTemp = millis();
+          autoOffWaiting = true;
+          sett.reload();
       }
     }
 
@@ -240,7 +232,7 @@ void loop() {
       autoOffWaiting = false;
     }
 
-    if (alarmStarting || autoOffWaiting) return;
+    if (alarmControl.isStarting() || autoOffWaiting) return;
 
     
     if (ledState) strip.setBrightness(ledBr);
