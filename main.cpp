@@ -213,7 +213,10 @@ void loop() {
     strip.tick();
     btn.tick();
 
-    if (btn.click()) ledState = !ledState;
+    if (btn.click()) {
+      ledState = !ledState;
+      sett.reload();
+    }
 
     if (alarmControl.isStarting()) {
       if (millis() - timeTemp >= addBrIn) {
@@ -244,7 +247,7 @@ void loop() {
       }
     }
 
-    if (autoOffWaiting && db[kk::alarm_auto_off] && millis() - timeTemp >= db[kk::alarm_auto_off_period].toInt32()*1000) {
+    if (autoOffWaiting && db[kk::alarm_auto_off] && millis() - timeTemp >= (uint32_t)db[kk::alarm_auto_off_period].toInt32()*1000) {
       ledState = false;
       ledBr = 0;
       autoOffWaiting = false;
