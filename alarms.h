@@ -3,9 +3,9 @@
 
 class Alarm {
     public:
-        Alarm (GyverNTP *NTP) {
-            _NTP = NTP;
-        };
+        // Alarm (GyverNTP *NTP) {
+        //     _NTP = NTP;
+        // };
 
         bool secondTick();
         bool isStarting();
@@ -24,7 +24,7 @@ class Alarm {
         };
 
     private:
-        GyverNTP *_NTP;
+        // GyverNTP *_NTP;
         uint32_t (*_alarmData)[alarmDBData::ITEMS_COUNT];
 
         bool _alarmStarting = false;
@@ -49,7 +49,7 @@ bool Alarm::isEnd() {
 
 bool Alarm::secondTick() {
     if (_alarmStarting) {
-        Datime dt(*_NTP);
+        Datime dt(NTP);
         if (_alarmData[_alarmStartingId][alarmDBData::alarm_seconds] == dt.daySeconds()) {
             _alarmStarting = false;
             _isEndFlag = true;
@@ -59,10 +59,10 @@ bool Alarm::secondTick() {
     else {
         for (uint8_t i = 0; i < ALARMS_COUNT; i++) {
             if (_alarmData[i][alarmDBData::alarm_state]) {
-                Datime dt(*_NTP);
+                Datime dt(NTP);
                 if (_alarmData[i][dt.weekDay + 1]) {
 
-                    Datime alarmDT(*_NTP);
+                    Datime alarmDT(NTP);
 
                     if(_alarmData[i][alarmDBData::alarm_seconds] - dt.daySeconds() == _alarmPeriod) {
                         _alarmStartingId = i;

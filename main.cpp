@@ -5,12 +5,26 @@
 #include <LittleFS.h>
 
 #define ALARMS_COUNT 3 // количестов будильников
+#define BTN_PIN D3 // Пин кнопки. Можно закомментировать, если кнопка не будет использоваться
 
 #include "strip.h"
 #include "config.h"
 #include "alarms.h"
 
-Alarm alarmControl(&NTP);
+#ifdef BTN_PIN
+
+#define EB_NO_FOR           
+#define EB_NO_CALLBACK      
+#define EB_NO_COUNTER      
+#define EB_NO_BUFFER 
+
+#include "EncButton.h"
+
+Button btn(BTN_PIN);
+
+#endif
+
+Alarm alarmControl;
 
 GyverDBFile db(&LittleFS, "/data.db");
 
@@ -63,10 +77,12 @@ void build(sets::Builder& b) {
         NTP.setGMT(b.build.value);
         db.update();
       } 
-      if (b.Number(kk::on_before_alarm_period, "Включение за (в секундах)")){
-            addBrIn = db[kk::on_before_alarm_period].toInt32() * 1000 / 255; 
-            db.update();
-          }
+      if (b.Number(kk::on_before_alarm_period, "Включение за (в секундах)")) {
+        const uint32_t period = db[kk::on_before_alarm_period].toInt32();
+        addBrIn = period * 1000 / 255; 
+        alarmControl.setAlarmPeriod(period);
+        db.update();
+      }
       if (b.Number(kk::alarm_auto_off_period, "Выключение через (в секундах)")) db.update();
 
       if (b.Switch(kk::alarm_auto_off, "Автовыключение")) db.update();
@@ -195,7 +211,9 @@ void setup() {
 void loop() {
     sett.tick();
     strip.tick();
-    
+    btn.tick();
+
+    if (btn.click()) ledState = !ledState;
 
     if (alarmControl.isStarting()) {
       if (millis() - timeTemp >= addBrIn) {
