@@ -211,6 +211,8 @@ void setup() {
 void loop() {
     sett.tick();
     strip.tick();
+
+#ifdef BTN_PIN
     btn.tick();
 
     if (btn.click()) {
@@ -218,6 +220,7 @@ void loop() {
       autoOffWaiting = false;
       sett.reload();
     }
+#endif
 
     if (NTP.tick()) {
       if (alarmControl.secondTick()) {
