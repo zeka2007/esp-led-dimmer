@@ -215,6 +215,7 @@ void loop() {
 
     if (btn.click()) {
       ledState = !ledState;
+      autoOffWaiting = false;
       sett.reload();
     }
 
