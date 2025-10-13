@@ -253,7 +253,6 @@ void loop() {
 
     if (autoOffWaiting && db[kk::alarm_auto_off] && millis() - timeTemp >= (uint32_t)db[kk::alarm_auto_off_period].toInt32()*1000) {
       ledState = false;
-      ledBr = 0;
       autoOffWaiting = false;
     }
 
