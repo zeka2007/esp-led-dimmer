@@ -59,7 +59,7 @@ bool Alarm::secondTick() { // возвращает true при запуске б
         for (uint8_t i = 0; i < ALARMS_COUNT; i++) {
             if (_alarmData[i][alarmDBData::alarm_state]) {
                 Datime dt(NTP);
-                if (_alarmData[i][dt.weekDay + 1]) {
+                if (_alarmData[i][dt.weekDay() + 1]) {
 
                     Datime alarmDT(NTP);
 
