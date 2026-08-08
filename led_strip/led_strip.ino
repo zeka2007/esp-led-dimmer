@@ -40,7 +40,10 @@ uint16_t addBrIn; // добавлять по одной единице ярко�
 uint16_t ledBr = 255;
 bool ledState = false;
 bool effectsState = false;
-bool autoOffWaiting = false;
+bool autoOffWaiting = false; 
+int wifiTries = 20;
+bool wifiIsConnected = false;
+bool APused = false;
 
 uint32_t timeTemp;
 
@@ -60,6 +63,7 @@ void startAP() {
   WiFi.disconnect();
   WiFi.mode(WIFI_AP_STA);
   WiFi.softAP("LED STRIP AP");
+  APused = true;
 }
 
 void build(sets::Builder& b) {
@@ -165,22 +169,14 @@ void setup() {
 
     // если логин задан - подключаемся
     if (db[kk::wifi_ssid].length()) {
-        WiFi.mode(WIFI_STA);
-        WiFi.begin(db[kk::wifi_ssid], db[kk::wifi_pass]);
-        int tries = 20;
-        while (WiFi.status() != WL_CONNECTED) {
-            delay(500);
-            digitalWrite(LED_BUILTIN, 0);
-            delay(50);
-            digitalWrite(LED_BUILTIN, 1);
-            if (!--tries) break;
-        }
-        if (WiFi.status() != WL_CONNECTED) startAP();
-        
+      WiFi.mode(WIFI_STA);
+      WiFi.begin(db[kk::wifi_ssid], db[kk::wifi_pass]);
     }
-    else startAP();
+    else {
+      startAP();
+      sett.begin();
+    }
 
-    sett.begin();
     sett.onBuild(build);
     sett.onUpdate(update);
 
@@ -202,14 +198,10 @@ void setup() {
     alarmControl.setAlarmPeriod(db[kk::on_before_alarm_period].toInt32());
    
     addBrIn = db[kk::on_before_alarm_period].toInt32() * 1000 / 255; 
-
-    NTP.begin(db[kk::time_zone]);
-    NTP.setPeriod(18000);
 }
 
 
 void loop() {
-    sett.tick();
     strip.tick();
 
 #ifdef BTN_PIN
@@ -221,6 +213,36 @@ void loop() {
       sett.reload();
     }
 #endif
+
+    if (!(alarmControl.isStarting() || autoOffWaiting)) {
+      if (ledState) strip.setBrightness(ledBr);
+      else strip.setBrightness(0);
+    }
+
+    if (!wifiIsConnected && !APused) {
+      if (WiFi.status() != WL_CONNECTED && wifiTries) {
+        unsigned long currentMilles = millis();
+        if (currentMilles - timeTemp >= 500 &&
+        currentMilles - timeTemp < 550) digitalWrite(LED_BUILTIN, 0);
+        if (currentMilles - timeTemp >= 550) {
+          digitalWrite(LED_BUILTIN, 1);
+        
+          timeTemp = currentMilles;
+          wifiTries--;
+        }
+        return;
+      }
+      if (WiFi.status() != WL_CONNECTED && !wifiTries) startAP();
+      if (WiFi.status() == WL_CONNECTED) {
+        wifiIsConnected = true;
+        sett.begin();
+        NTP.begin(db[kk::time_zone]);
+        NTP.setPeriod(18000);
+        digitalWrite(LED_BUILTIN, 0);
+      }
+    }
+    
+    sett.tick();
 
     if (NTP.tick()) {
       if (alarmControl.secondTick()) {
@@ -255,10 +277,4 @@ void loop() {
       ledState = false;
       autoOffWaiting = false;
     }
-
-    if (alarmControl.isStarting() || autoOffWaiting) return;
-
-    
-    if (ledState) strip.setBrightness(ledBr);
-    else strip.setBrightness(0);
 }
